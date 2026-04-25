@@ -19,6 +19,8 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--logs", type=str, default="logs/")
     p.add_argument("--out", type=str, default="docs/plots/")
     p.add_argument("--eval", type=str, default="docs/eval_results.json")
+    p.add_argument("--trainer-state", type=str, default=None,
+                   help="Path to TRL trainer_state.json (fallback when no JSONL logs)")
     return p.parse_args()
 
 
@@ -39,8 +41,34 @@ def _load_all_logs(logs_dir: Path) -> List[Dict[str, Any]]:
     rows = []
     for p in sorted(logs_dir.glob("*.jsonl")):
         rows.extend(_load_jsonl(p))
-    # Sort by step if present
     rows.sort(key=lambda r: r.get("step", r.get("global_step", 0)))
+    return rows
+
+
+def _load_trainer_state(state_path: Path) -> List[Dict[str, Any]]:
+    """Read TRL's trainer_state.json log_history into the same row format."""
+    if not state_path.exists():
+        return []
+    with open(state_path) as f:
+        data = json.load(f)
+    rows = []
+    for entry in data.get("log_history", []):
+        step = entry.get("step")
+        if step is None:
+            continue
+        row: Dict[str, Any] = {"step": step}
+        # TRL key variants
+        for src, dst in [
+            ("reward", "reward/mean"),
+            ("rewards/mean", "reward/mean"),
+            ("reward/mean", "reward/mean"),
+            ("loss", "loss"),
+            ("train/loss", "loss"),
+        ]:
+            if src in entry:
+                row[dst] = entry[src]
+        rows.append(row)
+    rows.sort(key=lambda r: r["step"])
     return rows
 
 
@@ -216,12 +244,20 @@ def main() -> None:
         print("matplotlib not installed — pip install matplotlib")
         return
 
+    rows: List[Dict[str, Any]] = []
     if logs_dir.exists():
         rows = _load_all_logs(logs_dir)
         print(f"Loaded {len(rows)} log rows from {logs_dir}")
-        _plot_reward_curve(rows, out_dir)
+
+    if not rows and args.trainer_state:
+        state_path = Path(args.trainer_state)
+        rows = _load_trainer_state(state_path)
+        print(f"Loaded {len(rows)} log rows from trainer_state {state_path}")
+
+    if not rows:
+        print("No log data found — skipping reward curve.")
     else:
-        print(f"Logs dir not found: {logs_dir}")
+        _plot_reward_curve(rows, out_dir)
 
     _plot_bypass_bars(eval_path, out_dir)
     _plot_per_category(eval_path, out_dir)

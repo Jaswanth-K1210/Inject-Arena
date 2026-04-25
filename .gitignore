@@ -32,8 +32,6 @@ wandb/
 /logs/
 *.safetensors
 
-# Generated plots (un-ignore once produced in Phase 6)
-/docs/plots/*.png
 
 # IDE
 .vscode/
