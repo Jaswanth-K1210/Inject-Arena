@@ -73,8 +73,21 @@ class SecAlignAgent:
 
     def _try_load_lora(self) -> None:
         try:
+            import os
+            import huggingface_hub
             from vllm import LLM, SamplingParams
             from vllm.lora.request import LoRARequest
+
+            # Pre-download the LoRA adapter in the parent process where HF_TOKEN
+            # is available. vLLM's EngineCore subprocess does not inherit env vars
+            # reliably, so passing a HF repo ID directly causes a 401 at inference
+            # time. snapshot_download caches to ~/.cache/huggingface/hub.
+            logger.info("Pre-downloading SecAlign LoRA adapter …")
+            local_lora_path = huggingface_hub.snapshot_download(
+                repo_id=self._lora_adapter,
+                token=os.environ.get("HF_TOKEN"),
+            )
+            logger.info("LoRA adapter cached at %s", local_lora_path)
 
             logger.info("Loading SecAlign-8B via vLLM + LoRA …")
             self._llm = LLM(
@@ -94,7 +107,7 @@ class SecAlignAgent:
             self._lora_request = LoRARequest(
                 lora_name="Meta-SecAlign-8B",
                 lora_int_id=1,
-                lora_path=self._lora_adapter,
+                lora_path=local_lora_path,
             )
             self._mode = "lora"
             logger.info("SecAlignAgent loaded (mode=lora).")
