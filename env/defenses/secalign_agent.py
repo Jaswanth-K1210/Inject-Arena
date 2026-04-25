@@ -84,6 +84,7 @@ class SecAlignAgent:
                 max_lora_rank=64,
                 trust_remote_code=True,
                 gpu_memory_utilization=self._gpu_memory_utilization,
+                max_model_len=4096,
             )
             self._sampling_params = SamplingParams(
                 temperature=0.0,

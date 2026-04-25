@@ -115,7 +115,7 @@ def _load_model_and_tokenizer(model_id: str, seed: int):
 
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map="auto",
         trust_remote_code=True,
     )
