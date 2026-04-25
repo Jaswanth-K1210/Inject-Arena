@@ -1,11 +1,14 @@
 """LlamaFirewall wrapper.
 
-Runs user input through PromptGuard (injection detection) and agent
-output through AgentAlignment (reasoning-trace auditing) via Meta's
-official ``llamafirewall`` package.
+Scans user input via the llamafirewall PromptGuard scanner.
+AgentAlignment (output-side scanner) is loaded only when TOGETHER_API_KEY
+is set in the environment; otherwise it is skipped gracefully.
+
+llamafirewall 1.0.x uses async internally.  In Jupyter/Colab the event loop
+is already running, so we patch it with nest_asyncio on first load.
 
 Setup (once per Colab session):
-    pip install llamafirewall
+    pip install llamafirewall nest_asyncio
     llamafirewall configure
 
 Docs: https://github.com/meta-llama/PurpleLlama/tree/main/LlamaFirewall
@@ -13,12 +16,34 @@ Docs: https://github.com/meta-llama/PurpleLlama/tree/main/LlamaFirewall
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from typing import Any, Optional
 
 from .base import DefenseVerdict
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_nest_asyncio() -> None:
+    """Allow asyncio.run() inside a running event loop (Jupyter/Colab)."""
+    try:
+        import nest_asyncio  # type: ignore
+        nest_asyncio.apply()
+    except ImportError:
+        pass
+
+
+def _run_coro(coro: Any) -> Any:
+    """Run a coroutine or return a plain value, handling Jupyter's running loop."""
+    if not asyncio.iscoroutine(coro):
+        return coro
+    try:
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
 
 
 class FirewallWrapper:
@@ -28,24 +53,32 @@ class FirewallWrapper:
 
     def __init__(self) -> None:
         self._fw = None
+        self._has_agent_alignment = False
 
     def _ensure_loaded(self) -> None:
         if self._fw is not None:
             return
+        _apply_nest_asyncio()
         try:
             from llamafirewall import LlamaFirewall, Role, ScannerType  # type: ignore
 
-            logger.info("Initialising LlamaFirewall …")
-            self._fw = LlamaFirewall(
-                scanners={
-                    Role.USER: [ScannerType.PROMPT_GUARD],
-                    Role.ASSISTANT: [ScannerType.AGENT_ALIGNMENT],
-                }
-            )
+            has_together = bool(os.environ.get("TOGETHER_API_KEY", "").strip())
+            scanners: dict = {Role.USER: [ScannerType.PROMPT_GUARD]}
+            if has_together:
+                scanners[Role.ASSISTANT] = [ScannerType.AGENT_ALIGNMENT]
+                self._has_agent_alignment = True
+            else:
+                logger.warning(
+                    "TOGETHER_API_KEY not set — AgentAlignment scanner disabled. "
+                    "r_bypass_fw will reflect PromptGuard input-side scan only."
+                )
+
+            logger.info("Initialising LlamaFirewall (agent_alignment=%s) …", has_together)
+            self._fw = LlamaFirewall(scanners=scanners)
             logger.info("LlamaFirewall ready.")
         except ImportError as exc:
             raise ImportError(
-                "llamafirewall not installed. Run: pip install llamafirewall && "
+                "llamafirewall not installed. Run: pip install llamafirewall nest_asyncio && "
                 "llamafirewall configure"
             ) from exc
         except Exception as exc:
@@ -57,16 +90,15 @@ class FirewallWrapper:
         agent_output: str,
         tool_call: Optional[Any] = None,
     ) -> DefenseVerdict:
-        """Scan both the user input and the agent's output.
-
-        Returns flagged=True if either the PromptGuard or the
-        AgentAlignment scanner blocks. Score is the max across both.
-        """
+        """Scan user input (always) and agent output (if TOGETHER_API_KEY set)."""
         self._ensure_loaded()
         fw = self._fw
 
         user_flagged, user_score, user_reason = self._scan_user(fw, user_query)
-        asst_flagged, asst_score, asst_reason = self._scan_assistant(fw, agent_output, tool_call)
+        if self._has_agent_alignment:
+            asst_flagged, asst_score, asst_reason = self._scan_assistant(fw, agent_output, tool_call)
+        else:
+            asst_flagged, asst_score, asst_reason = False, 0.0, None
 
         flagged = user_flagged or asst_flagged
         score = max(user_score, asst_score)
@@ -82,7 +114,7 @@ class FirewallWrapper:
         try:
             from llamafirewall import ScanDecision, UserMessage  # type: ignore
 
-            result = fw.scan(UserMessage(content=text))
+            result = _run_coro(fw.scan(UserMessage(content=text)))
             flagged = result.decision == ScanDecision.BLOCK
             score = float(getattr(result, "score", 1.0 if flagged else 0.0))
             reason = f"fw_user:{result.reason}" if flagged and getattr(result, "reason", None) else None
@@ -107,7 +139,7 @@ class FirewallWrapper:
         try:
             from llamafirewall import AssistantMessage, ScanDecision  # type: ignore
 
-            result = fw.scan(AssistantMessage(content=content))
+            result = _run_coro(fw.scan(AssistantMessage(content=content)))
             flagged = result.decision == ScanDecision.BLOCK
             score = float(getattr(result, "score", 1.0 if flagged else 0.0))
             reason = f"fw_asst:{result.reason}" if flagged and getattr(result, "reason", None) else None
