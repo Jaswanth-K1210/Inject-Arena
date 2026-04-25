@@ -1,3 +1,15 @@
+---
+title: InjectArena
+emoji: 🛡️
+colorFrom: blue
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: true
+license: apache-2.0
+short_description: We broke Meta's prompt-injection firewall — 100% bypass rate.
+---
+
 # InjectArena
 
 **OpenEnv-compliant RL environment for training an adaptive prompt-injection attacker against Meta's frozen agent-safety stack.**
