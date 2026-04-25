@@ -514,7 +514,7 @@ function App() {
 
       <footer className="app-footer">
         <a href="https://github.com/Jaswanth-K1210/Inject-Arena" target="_blank" rel="noopener noreferrer">GitHub</a> ·
-        &nbsp;<a href="https://huggingface.co/spaces/Jaswanth-K1210/injectarena" target="_blank" rel="noopener noreferrer">HF Space</a> ·
+        &nbsp;<a href="https://huggingface.co/spaces/Jaswanth-K/Inject-Arena" target="_blank" rel="noopener noreferrer">HF Space</a> ·
         &nbsp;<a href="https://github.com/Jaswanth-K1210/Inject-Arena/blob/main/demo/VIDEO_SCRIPT.md" target="_blank" rel="noopener noreferrer">Demo Video</a> ·
         &nbsp;<a href="https://github.com/Jaswanth-K1210/Inject-Arena#citation" target="_blank" rel="noopener noreferrer">Citation</a> ·
         &nbsp;Apache-2.0

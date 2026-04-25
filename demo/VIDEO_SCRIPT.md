@@ -6,7 +6,7 @@
 
 ## Setup before recording
 
-- Browser open at: `https://huggingface.co/spaces/Jaswanth-K1210/injectarena`
+- Browser open at: `https://huggingface.co/spaces/Jaswanth-K/Inject-Arena`
 - VS Code open on `README.md` (for architecture diagram shot)
 - Terminal ready with `git log --oneline -8` output visible
 

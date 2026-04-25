@@ -14,7 +14,7 @@ short_description: We broke Meta's prompt-injection firewall — 100% bypass rat
 
 **OpenEnv-compliant RL environment for training an adaptive prompt-injection attacker against Meta's frozen agent-safety stack.**
 
-[![HF Space](https://img.shields.io/badge/🤗_Space-injectarena-yellow)](https://huggingface.co/spaces/Jaswanth-K1210/injectarena)
+[![HF Space](https://img.shields.io/badge/🤗_Space-injectarena-yellow)](https://huggingface.co/spaces/Jaswanth-K/Inject-Arena)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Jaswanth-K1210/Inject-Arena/blob/main/notebooks/colab_runner.ipynb)
 
 ---
@@ -182,7 +182,7 @@ print(f"Reward: {result['reward']:.3f}  Done: {result['done']}")
 
 ### HuggingFace Space
 
-The Space at `https://huggingface.co/spaces/Jaswanth-K1210/injectarena` accepts the same `/reset` and `/step` API — use it without any local setup.
+The Space at `https://huggingface.co/spaces/Jaswanth-K/Inject-Arena` accepts the same `/reset` and `/step` API — use it without any local setup.
 
 ---
 
@@ -235,7 +235,7 @@ The `[gpu]` extras (`torch`, `transformers`, `trl`, `vllm`, `llamafirewall`) are
 
 ## Links
 
-- **HF Space**: https://huggingface.co/spaces/Jaswanth-K1210/injectarena
+- **HF Space**: https://huggingface.co/spaces/Jaswanth-K/Inject-Arena
 - **GitHub**: https://github.com/Jaswanth-K1210/Inject-Arena
 - **Training notebook**: [notebooks/colab_runner.ipynb](notebooks/colab_runner.ipynb)
 - **Demo video**: *(to be added)*
