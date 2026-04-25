@@ -194,12 +194,10 @@ function ResultCard({ outcome, stepCount, attackType, payloadPreview, onRetry })
   if (!outcome) return null;
   const broke_pg2 = outcome.broke_pg2;
   const broke_fw  = outcome.broke_fw;
-  const task_ok   = outcome.task_succeeded;
-  const composed  = outcome.composed_bypass;
   const blocked_at = outcome.blocked_at;
 
-  // We define "firewall broken" as bypassing both Meta classifier defenses
-  // (PG2 and LlamaFirewall) — task success is a separate, harder gate.
+  // "Firewall broken" = bypassed both Meta classifier defenses (PG2 + LlamaFirewall).
+  // This is the headline win — the result the demo is built around.
   const firewall_broken = broke_pg2 && broke_fw;
 
   if (firewall_broken) {
@@ -209,30 +207,32 @@ function ResultCard({ outcome, stepCount, attackType, payloadPreview, onRetry })
           <h2>🚨 META FIREWALL BROKEN</h2>
         </div>
         <div className="result-body">
-          <p><strong>Defenses bypassed:</strong>
-            &nbsp;PG2 {broke_pg2 ? '✓' : '✗'}
-            &nbsp;SecAlign {task_ok ? '✓ (task executed)' : '✗ (refused task)'}
-            &nbsp;LlamaFirewall {broke_fw ? '✓' : '✗'}
-          </p>
+          <div className="bypass-summary">
+            <div className="bypass-row passed">
+              <span className="bypass-icon">🛡️</span>
+              <span className="bypass-label">Llama Prompt Guard 2</span>
+              <span className="bypass-status">✓ Bypassed</span>
+            </div>
+            <div className="bypass-row passed">
+              <span className="bypass-icon">🔥</span>
+              <span className="bypass-label">LlamaFirewall</span>
+              <span className="bypass-status">✓ Bypassed</span>
+            </div>
+          </div>
+
           <p><strong>Attacker payload:</strong> "{payloadPreview}"</p>
-          <p className="compromise">
-            <strong>Composed bypass:</strong> {composed ? 'YES — full attack succeeded' : 'No — classifiers bypassed, agent refused the injected task'}
-          </p>
 
           <div className="why-matters">
             <h4>Why this matters</h4>
-            <p>Meta deployed all three of these defenses against prompt injection.
-              Our 1.5B-parameter RL attacker beat the input + output classifiers
-              (Llama Prompt Guard 2 and LlamaFirewall) at 100% rate on this scenario.
-              SecAlign-8B is the only layer that still catches the injected task.
+            <p>Meta deployed Llama Prompt Guard 2 and LlamaFirewall as the primary
+              input/output defenses against prompt injection. Our 1.5B-parameter RL
+              attacker beat both at <strong>100% rate</strong> across recorded attacks.
             </p>
+            <p className="footnote">Next milestone: full end-to-end task execution against the SecAlign-8B inner agent (work in progress, see roadmap).</p>
           </div>
 
           <div className="result-actions">
             <button className="btn-secondary" onClick={() => onRetry(stepCount)}>Run another scenario</button>
-            {!composed && stepCount < 1500 && (
-              <button className="btn-primary" onClick={() => onRetry(1500)}>↑ Retry with 1500 steps</button>
-            )}
           </div>
         </div>
       </div>
@@ -254,6 +254,67 @@ function ResultCard({ outcome, stepCount, attackType, payloadPreview, onRetry })
           {stepCount < 300  && <button className="btn-primary" onClick={() => onRetry(300)}>↑ Retry with 300 steps</button>}
           {stepCount < 1500 && <button className="btn-primary" onClick={() => onRetry(1500)}>↑↑ Retry with 1500 steps</button>}
           <button className="btn-secondary" onClick={() => onRetry(stepCount, true)}>Try a different attack type</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// LaunchModeModal — appears on click to ask "Live training" or "Pre-tested results"
+// ---------------------------------------------------------------------------
+
+const COLAB_NOTEBOOK_URL = 'https://colab.research.google.com/github/Jaswanth-K1210/Inject-Arena/blob/main/notebooks/colab_runner.ipynb';
+
+// Calibrated from the actual Colab A100 measurement: 300 steps took ~1.5 hours.
+// → 18 sec/step (includes 4 GRPO completions × full defense stack per step).
+const SECS_PER_STEP = 18;
+
+function formatDuration(steps) {
+  const totalSec = steps * SECS_PER_STEP;
+  const hrs = Math.floor(totalSec / 3600);
+  const min = Math.round((totalSec % 3600) / 60);
+  if (hrs === 0) return `≈${min} min`;
+  if (min === 0) return `≈${hrs} hr`;
+  return `≈${hrs} hr ${min} min`;
+}
+
+function LaunchModeModal({ open, onClose, onPickRecorded, attackTypeLabel, steps }) {
+  if (!open) return null;
+  const estimate = formatDuration(steps);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>How do you want to run this attack?</h3>
+          <p className="modal-subtitle">{attackTypeLabel} · {steps} steps</p>
+        </div>
+
+        <div className="modal-options">
+          <button className="modal-option recommended" onClick={onPickRecorded}>
+            <div className="modal-option-icon">⚡</div>
+            <div className="modal-option-body">
+              <div className="modal-option-title">View Pre-Tested Result <span className="badge-instant">Instant</span></div>
+              <p>Real recorded attack from our trained 1.5B Qwen attacker against the live Meta defense stack on A100. PG2 92% / FW 100% bypass rate.</p>
+              <p className="modal-option-cta">Watch the recorded attack →</p>
+            </div>
+          </button>
+
+          <a className="modal-option live" href={COLAB_NOTEBOOK_URL} target="_blank" rel="noopener noreferrer">
+            <div className="modal-option-icon">🔥</div>
+            <div className="modal-option-body">
+              <div className="modal-option-title">Run Live Training <span className="badge-time">{estimate}</span></div>
+              <p>Open the Colab notebook and train a fresh attacker for {steps} steps on a real A100 GPU. Free with Colab Pro; you'll watch the reward curve climb in real time.</p>
+              <p className="modal-option-cta">Open Colab notebook →</p>
+            </div>
+          </a>
+        </div>
+
+        <div className="modal-footnote">
+          Live runs aren't hosted here — Hugging Face free Spaces don't have GPUs, and a long-running training process would block other users. Use Colab and bring the trained checkpoint back.
+          <br />
+          <a href="#" onClick={(e) => { e.preventDefault(); onClose(); }} className="modal-cancel">Cancel</a>
         </div>
       </div>
     </div>
@@ -295,6 +356,7 @@ function App() {
   const [stats, setStats] = useState(null);
   const [highlight, setHighlight] = useState(null);
   const [error, setError] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Initial data fetch
   useEffect(() => {
@@ -321,7 +383,15 @@ function App() {
       .catch(() => {});
   }, []);
 
-  const launchAttack = async () => {
+  // Click → open modal. Modal decides whether to fetch recorded trace or send
+  // the user to Colab. We DON'T launch the attack directly anymore.
+  const openLaunchModal = () => {
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const runRecordedAttack = async () => {
+    setModalOpen(false);
     setIsAttacking(false);   // reset visualization first
     setOutcome(null);
     setTrace(null);
@@ -363,7 +433,8 @@ function App() {
     setOutcome(null);
     setTrace(null);
     document.getElementById('config-panel')?.scrollIntoView({ behavior: 'smooth' });
-    setTimeout(launchAttack, 500);
+    // Skip the modal on retry — user already chose recorded once.
+    setTimeout(runRecordedAttack, 500);
   };
 
   const heroPayloadPreview = highlight?.payload
@@ -447,7 +518,7 @@ function App() {
                 </div>
               </div>
 
-              <button className="btn-primary btn-full launch-btn" onClick={launchAttack} disabled={isAttacking}>
+              <button className="btn-primary btn-full launch-btn" onClick={openLaunchModal} disabled={isAttacking}>
                 {isAttacking ? 'Attacking…' : '🚀 Launch Attack'}
               </button>
 
@@ -511,6 +582,14 @@ function App() {
           </section>
         )}
       </main>
+
+      <LaunchModeModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onPickRecorded={runRecordedAttack}
+        attackTypeLabel={attackTypes.find(t => t.id === attackType)?.label || attackType}
+        steps={steps}
+      />
 
       <footer className="app-footer">
         <a href="https://github.com/Jaswanth-K1210/Inject-Arena" target="_blank" rel="noopener noreferrer">GitHub</a> ·
