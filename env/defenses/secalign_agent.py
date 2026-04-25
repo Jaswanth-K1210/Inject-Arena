@@ -82,10 +82,18 @@ class SecAlignAgent:
             # is available. vLLM's EngineCore subprocess does not inherit env vars
             # reliably, so passing a HF repo ID directly causes a 401 at inference
             # time. snapshot_download caches to ~/.cache/huggingface/hub.
+            hf_token = (
+                os.environ.get("HF_TOKEN")
+                or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+            )
+            if hf_token:
+                huggingface_hub.login(token=hf_token, add_to_git_credential=False)
+            else:
+                logger.warning("HF_TOKEN not found in environment — LoRA download may fail for gated repos")
             logger.info("Pre-downloading SecAlign LoRA adapter …")
             local_lora_path = huggingface_hub.snapshot_download(
                 repo_id=self._lora_adapter,
-                token=os.environ.get("HF_TOKEN"),
+                token=hf_token,
             )
             logger.info("LoRA adapter cached at %s", local_lora_path)
 
