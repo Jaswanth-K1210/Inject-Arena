@@ -88,42 +88,37 @@ def _build_dataset(split: str = "train") -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Model loading — standard transformers + PEFT (no Unsloth)
+# Model loading — standard transformers + PEFT (no Unsloth, no BnB 4-bit)
 #
 # Unsloth 2025.11.x patches TRL's GRPOTrainer with an incompatible
 # grpo_accumulated_loss signature, crashing at trainer.train(). Since the
 # reward evaluation (3.5 s/step) dominates, Unsloth's generation speedup
-# is not worth the breakage. Standard BitsAndBytes 4-bit is sufficient.
+# is not worth the breakage. BitsAndBytes 4-bit was tried but bnb pins
+# lm_head to fp32 by default, causing dtype mismatches under bf16 compute
+# in GRPO's generate() path — plain bf16 on A100 is simpler and faster.
 # ---------------------------------------------------------------------------
 
 def _load_model_and_tokenizer(model_id: str, seed: int):
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import LoraConfig, get_peft_model
 
-    logger.info("Loading %s via transformers + PEFT (4-bit LoRA) …", model_id)
-    bnb = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-    )
+    # Plain bf16 (no 4-bit). Qwen2.5-1.5B is ~3 GB in bf16; trivial on A100.
+    # BnB 4-bit kept lm_head in fp32 (its modules_to_not_convert default) which
+    # caused F.linear dtype mismatches against the bf16 hidden states inside
+    # GRPO's generate() path, and post-hoc casting was unreliable under
+    # device_map="auto"+tied-embeddings. Dropping bnb removes the surface.
+    logger.info("Loading %s in bfloat16 + PEFT LoRA r=16 …", model_id)
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        quantization_config=bnb,
-        dtype=torch.bfloat16,
+        torch_dtype=torch.bfloat16,
         device_map="auto",
         trust_remote_code=True,
     )
-    # Cast non-quantized params (lm_head, embeddings, norms) to bfloat16 so they
-    # match the compute dtype during generation.
-    for name, module in model.named_modules():
-        if hasattr(module, "weight") and module.weight is not None and module.weight.dtype == torch.float32:
-            module.to(torch.bfloat16)
 
     lora_cfg = LoraConfig(
         r=16,
