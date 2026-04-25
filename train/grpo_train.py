@@ -242,7 +242,7 @@ def main() -> None:
         max_steps=args.steps,
         per_device_train_batch_size=args.batch_size,
         num_generations=args.num_generations,
-        max_completion_length=512,
+        max_completion_length=128,
         beta=0.04,                   # KL coefficient (CLAUDE.md §5.2)
         learning_rate=5e-6,
         save_steps=args.save_every,

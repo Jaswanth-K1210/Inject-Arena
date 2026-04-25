@@ -57,6 +57,9 @@ class FirewallWrapper:
         # Reuse an existing PromptGuard instance when llamafirewall's internal
         # scanner fails (e.g. transformers version mismatch on Colab T4).
         self._pg2_fallback = prompt_guard_fallback
+        # Circuit-breaker: after the first llamafirewall scan failure, skip
+        # further attempts and route directly to PG2 to avoid per-step log noise.
+        self._fw_user_broken = False
 
     def _ensure_loaded(self) -> None:
         if self._fw is not None:
@@ -97,7 +100,7 @@ class FirewallWrapper:
         self._ensure_loaded()
         fw = self._fw
 
-        user_flagged, user_score, user_reason = self._scan_user(fw, user_query, self._pg2_fallback)
+        user_flagged, user_score, user_reason = self._scan_user(fw, user_query)
         if self._has_agent_alignment:
             asst_flagged, asst_score, asst_reason = self._scan_assistant(fw, agent_output, tool_call)
         else:
@@ -110,27 +113,34 @@ class FirewallWrapper:
 
         return DefenseVerdict(flagged=flagged, score=score, reason=reason)
 
-    @staticmethod
-    def _scan_user(fw: Any, text: str, pg2_fallback: Optional[Any] = None) -> tuple[bool, float, Optional[str]]:
+    def _scan_user(self, fw: Any, text: str) -> tuple[bool, float, Optional[str]]:
         if not text or not text.strip():
             return False, 0.0, None
-        try:
-            from llamafirewall import ScanDecision, UserMessage  # type: ignore
 
-            result = _run_coro(fw.scan(UserMessage(content=text)))
-            flagged = result.decision == ScanDecision.BLOCK
-            score = float(getattr(result, "score", 1.0 if flagged else 0.0))
-            reason = f"fw_user:{result.reason}" if flagged and getattr(result, "reason", None) else None
-            return flagged, score, reason
-        except Exception as exc:
-            logger.warning("FirewallWrapper user scan error: %s — trying PG2 fallback", exc)
-            if pg2_fallback is not None:
-                try:
-                    verdict = pg2_fallback.scan(text)
-                    return verdict.flagged, verdict.score, f"fw_pg2fb:{verdict.reason}"
-                except Exception as fb_exc:
-                    logger.warning("FirewallWrapper PG2 fallback also failed: %s", fb_exc)
-            return False, 0.0, None
+        # If llamafirewall's user scanner has failed before, go straight to PG2.
+        if not self._fw_user_broken:
+            try:
+                from llamafirewall import ScanDecision, UserMessage  # type: ignore
+
+                result = _run_coro(fw.scan(UserMessage(content=text)))
+                flagged = result.decision == ScanDecision.BLOCK
+                score = float(getattr(result, "score", 1.0 if flagged else 0.0))
+                reason = f"fw_user:{result.reason}" if flagged and getattr(result, "reason", None) else None
+                return flagged, score, reason
+            except Exception as exc:
+                logger.warning(
+                    "FirewallWrapper user scan error: %s — switching to PG2 fallback for this session", exc
+                )
+                self._fw_user_broken = True
+
+        # PG2 fallback path (used on first failure and all subsequent calls).
+        if self._pg2_fallback is not None:
+            try:
+                verdict = self._pg2_fallback.scan(text)
+                return verdict.flagged, verdict.score, f"fw_pg2fb:{verdict.reason}"
+            except Exception as fb_exc:
+                logger.warning("FirewallWrapper PG2 fallback also failed: %s", fb_exc)
+        return False, 0.0, None
 
     @staticmethod
     def _scan_assistant(fw: Any, text: str, tool_call: Optional[Any]) -> tuple[bool, float, Optional[str]]:
