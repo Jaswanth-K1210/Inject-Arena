@@ -115,10 +115,16 @@ def _load_model_and_tokenizer(model_id: str, seed: int):
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map="auto",
         trust_remote_code=True,
     )
+    # Cast non-quantized params (lm_head, embeddings, norms) to bfloat16 so they
+    # match the compute dtype during generation.
+    for name, module in model.named_modules():
+        if hasattr(module, "weight") and module.weight is not None and module.weight.dtype == torch.float32:
+            module.to(torch.bfloat16)
+
     lora_cfg = LoraConfig(
         r=16,
         lora_alpha=16,
