@@ -88,50 +88,48 @@ def _build_dataset(split: str = "train") -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Model loading — tries Unsloth first, falls back to standard PEFT
+# Model loading — standard transformers + PEFT (no Unsloth)
+#
+# Unsloth 2025.11.x patches TRL's GRPOTrainer with an incompatible
+# grpo_accumulated_loss signature, crashing at trainer.train(). Since the
+# reward evaluation (3.5 s/step) dominates, Unsloth's generation speedup
+# is not worth the breakage. Standard BitsAndBytes 4-bit is sufficient.
 # ---------------------------------------------------------------------------
 
 def _load_model_and_tokenizer(model_id: str, seed: int):
-    try:
-        from unsloth import FastLanguageModel
-        logger.info("Loading %s via Unsloth (4-bit LoRA) …", model_id)
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=model_id,
-            max_seq_length=1024,
-            load_in_4bit=True,
-            dtype=None,
-        )
-        model = FastLanguageModel.get_peft_model(
-            model,
-            r=16,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                             "gate_proj", "up_proj", "down_proj"],
-            lora_alpha=16,
-            lora_dropout=0.0,
-            bias="none",
-            use_gradient_checkpointing="unsloth",
-            random_state=seed,
-        )
-        logger.info("Model loaded via Unsloth.")
-        return model, tokenizer, "unsloth"
-    except Exception as exc:
-        logger.warning("Unsloth load failed (%s) — falling back to transformers + PEFT.", exc)
-
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from peft import LoraConfig, get_peft_model
 
-    bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16,
-                              bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4")
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id, quantization_config=bnb, device_map="auto", trust_remote_code=True
+    logger.info("Loading %s via transformers + PEFT (4-bit LoRA) …", model_id)
+    bnb = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
     )
-    lora_cfg = LoraConfig(r=16, lora_alpha=16, lora_dropout=0.0, bias="none",
-                          target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-                          task_type="CAUSAL_LM")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        quantization_config=bnb,
+        device_map="auto",
+        trust_remote_code=True,
+    )
+    lora_cfg = LoraConfig(
+        r=16,
+        lora_alpha=16,
+        lora_dropout=0.0,
+        bias="none",
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                         "gate_proj", "up_proj", "down_proj"],
+        task_type="CAUSAL_LM",
+    )
     model = get_peft_model(model, lora_cfg)
-    logger.info("Model loaded via transformers + PEFT.")
+    model.print_trainable_parameters()
+    logger.info("Attacker model ready (peft).")
     return model, tokenizer, "peft"
 
 

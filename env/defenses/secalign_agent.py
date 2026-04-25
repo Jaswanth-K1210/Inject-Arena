@@ -43,7 +43,7 @@ class SecAlignAgent:
         lora_adapter: str = _LORA_ADAPTER,
         max_new_tokens: int = 256,
         seed: int = 42,
-        gpu_memory_utilization: float = 0.70,
+        gpu_memory_utilization: float = 0.55,
     ) -> None:
         self._base_model = base_model
         self._lora_adapter = lora_adapter
