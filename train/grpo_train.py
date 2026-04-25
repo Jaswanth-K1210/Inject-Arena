@@ -18,6 +18,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# vLLM 0.19+ moved GuidedDecodingParams; TRL's grpo_trainer imports it at load
+# time and crashes. We don't use vLLM-guided decoding, so stub it out before
+# importing anything from trl.
+try:
+    import vllm.sampling_params as _vsp
+    if not hasattr(_vsp, "GuidedDecodingParams"):
+        _vsp.GuidedDecodingParams = type("GuidedDecodingParams", (), {})
+except ImportError:
+    pass
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("grpo_train")
 
