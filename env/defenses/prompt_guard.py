@@ -65,11 +65,14 @@ class PromptGuard:
         label: str = result["label"].upper()
         score: float = float(result["score"])
 
-        flagged = label == "MALICIOUS"
-        pg2_score = score if flagged else 1.0 - score  # probability of being injection
+        # PG2 returns LABEL_0 (benign) or LABEL_1 (injection).
+        # Some builds expose BENIGN/MALICIOUS — handle both.
+        flagged = label in ("LABEL_1", "MALICIOUS", "INJECTION")
+        pg2_score = score if flagged else 1.0 - score  # probability of injection
 
+        label_str = "injection" if flagged else "benign"
         return DefenseVerdict(
             flagged=flagged,
             score=pg2_score,
-            reason=f"pg2:{label.lower()}",
+            reason=f"pg2:{label_str}",
         )
