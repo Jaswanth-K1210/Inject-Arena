@@ -41,3 +41,10 @@ wandb/
 # HF / model cache
 .hf_cache/
 .cache/
+
+# Frontend (Vite/React)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local
+npm-debug.log*

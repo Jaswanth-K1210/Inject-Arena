@@ -293,20 +293,34 @@ def _sse(payload: dict) -> bytes:
 # Static frontend (mounted last so /api/* takes precedence)
 # ---------------------------------------------------------------------------
 
-_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-_PLOTS_DIR = Path(__file__).resolve().parent.parent / "docs" / "plots"
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+# Vite outputs to frontend/dist/. The dev source tree (frontend/) is fall-back
+# only — useful when an unbuilt frontend is mounted in a development container.
+_FRONTEND_DIST = _REPO_ROOT / "frontend" / "dist"
+_FRONTEND_SRC = _REPO_ROOT / "frontend"
+_PLOTS_DIR = _REPO_ROOT / "docs" / "plots"
 
 if _PLOTS_DIR.exists():
     app.mount("/plots", StaticFiles(directory=_PLOTS_DIR), name="plots")
 
-if _FRONTEND_DIR.exists() and (_FRONTEND_DIR / "index.html").exists():
-    # Static assets (CSS/JS) live under /static/...
-    assets_dir = _FRONTEND_DIR
-    app.mount("/static", StaticFiles(directory=assets_dir), name="static")
+if (_FRONTEND_DIST / "index.html").exists():
+    # Vite build output: assets are referenced as /assets/... from index.html.
+    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="assets")
 
     @app.get("/")
     def root():
-        return FileResponse(_FRONTEND_DIR / "index.html")
+        return FileResponse(_FRONTEND_DIST / "index.html")
+
+    # Catch-all so Vite-built static files (favicon, icons, etc.) at the root
+    # also resolve. Mounting this AFTER all /api routes preserves API priority.
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")
+
+elif (_FRONTEND_SRC / "index.html").exists():
+    # Unbuilt source: only useful behind `vite dev`; here we just serve index.
+    @app.get("/")
+    def root():
+        return FileResponse(_FRONTEND_SRC / "index.html")
+
 else:
     @app.get("/")
     def root():
