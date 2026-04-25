@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: true
 license: apache-2.0
-short_description: We broke Meta's prompt-injection firewall — 100% bypass rate.
+short_description: RL attacker breaks Meta's prompt-injection firewall
 ---
 
 # InjectArena
