@@ -43,7 +43,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--save-every", type=int, default=100)
     p.add_argument("--log-to", choices=["jsonl", "wandb"], default="jsonl")
     p.add_argument("--model", type=str, default="Qwen/Qwen2.5-1.5B-Instruct")
-    p.add_argument("--batch-size", type=int, default=1)
+    p.add_argument("--batch-size", type=int, default=4)
     p.add_argument("--num-generations", type=int, default=4)
     p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
