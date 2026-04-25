@@ -7,7 +7,7 @@ name = "injectarena"
 version = "0.1.0"
 description = "OpenEnv-compliant RL environment for training adaptive prompt-injection attackers against the Meta agent-safety stack."
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Jaswanth Koppisetty" }]
 
