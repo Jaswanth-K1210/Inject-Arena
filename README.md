@@ -239,10 +239,10 @@ The `[gpu]` extras (`torch`, `transformers`, `trl`, `vllm`, `llamafirewall`) are
 
 ## Links
 
-- **HF Space**: https://huggingface.co/spaces/Jaswanth-K/Inject-Arena
+- **HF Space**: https://huggingface.co/spaces/Jaswanth-K/Inject-Arena-V2
 - **GitHub**: https://github.com/Jaswanth-K1210/Inject-Arena
 - **Training notebook**: [notebooks/colab_runner.ipynb](notebooks/colab_runner.ipynb)
-- **Demo video**: *(record a <2 min walkthrough of the HF Space and paste the YouTube URL here before submitting)*
+- **Demo video**: https://youtu.be/vdsYHyK885k
 
 ---
 
