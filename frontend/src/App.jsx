@@ -730,6 +730,31 @@ export default function App() {
           <span className="badge badge-yellow">SecAlign: binding defense</span>
           <span className="badge badge-blue">800 GRPO steps · A100</span>
         </div>
+        {/* Test your own model banner */}
+        <div className="test-banner">
+          <div className="test-banner-left">
+            <span className="test-banner-icon">🧪</span>
+            <div>
+              <strong>Stress-test your own LLM agent</strong>
+              <p>Send any agent payload to our OpenEnv API — get back a bypass score, task-success verdict, and per-defense breakdown instantly.</p>
+            </div>
+          </div>
+          <div className="test-banner-code">
+            <div className="test-code-line"><span className="tc-dim"># 1. get scenario</span></div>
+            <div className="test-code-line"><span className="tc-key">POST</span> <span className="tc-url">/reset</span>  <span className="tc-dim">{'{"seed": 42}'}</span></div>
+            <div className="test-code-line"><span className="tc-dim"># 2. send your payload</span></div>
+            <div className="test-code-line"><span className="tc-key">POST</span> <span className="tc-url">/step</span>   <span className="tc-dim">{'{"payload": "your text"}'}</span></div>
+            <div className="test-code-line"><span className="tc-dim"># returns reward 0–1 + pg2/fw/task verdicts</span></div>
+          </div>
+          <a
+            className="test-banner-btn"
+            href="https://colab.research.google.com/github/Jaswanth-K1210/Inject-Arena/blob/main/notebooks/colab_runner.ipynb"
+            target="_blank"
+          >
+            Run in Colab →
+          </a>
+        </div>
+
         <nav className="tabs">
           <button className={tab==='attack' ? 'tab-active' : 'tab'} onClick={() => setTab('attack')}>
             ⚔️ Launch Attack
@@ -825,7 +850,7 @@ export default function App() {
 
       <footer className="footer">
         <a href="https://github.com/Jaswanth-K1210/Inject-Arena" target="_blank">GitHub</a> ·
-        <a href="https://huggingface.co/spaces/Jaswanth-K/Inject-Arena" target="_blank">HF Space</a> ·
+        <a href="https://huggingface.co/spaces/Jaswanth-K/Inject-Arena-V2" target="_blank">HF Space</a> ·
         <a href="https://colab.research.google.com/github/Jaswanth-K1210/Inject-Arena/blob/main/notebooks/colab_runner.ipynb" target="_blank">Colab</a>
         <div className="footer-note">InjectArena · OpenEnv Hackathon India 2026 · Apache-2.0</div>
       </footer>
