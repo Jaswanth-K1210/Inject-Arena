@@ -404,29 +404,128 @@ function ResultSummary({ result, steps, attackType, onRetry }) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-function Dashboard() {
-  const plots = [
-    { src: '/plots/reward_curve.png',      caption: 'GRPO reward over 300 steps (real A100 run). Trending upward from 0.35 → 0.46.' },
-    { src: '/plots/bypass_bars.png',       caption: 'PG2 and LlamaFirewall bypass rates by attack category.' },
-    { src: '/plots/per_category.png',      caption: 'Per-category breakdown across 24 evaluated traces.' },
-    { src: '/plots/kl_loss_curve.png',     caption: 'KL divergence and loss — training stayed stable throughout.' },
-    { src: '/plots/completion_stats.png',  caption: 'Completion length and clipping ratio — attacker converged to max tokens.' },
-  ];
+const STATS_CARDS = [
+  { label: 'GRPO Steps',        value: '300',    sub: 'A100 · Google Colab Pro',    color: 'blue'   },
+  { label: 'Peak Reward',       value: '0.458',  sub: 'up from 0.347 at step 10',   color: 'green'  },
+  { label: 'PG2 Bypass',        value: '75–100%',sub: 'Llama Prompt Guard 2 (86M)', color: 'green'  },
+  { label: 'FW Bypass',         value: '100%',   sub: 'LlamaFirewall (all 4 types)',color: 'green'  },
+  { label: 'Task Success',      value: '0%',     sub: 'SecAlign-8B held — binding', color: 'yellow' },
+  { label: 'Training Time',     value: '~105 min', sub: '21 s/step on A100',        color: 'blue'   },
+];
 
+const RESULTS_TABLE = [
+  { metric: 'PG2 bypass rate',       baseline: '100%', zeroshot: '75%',  rl: '75–100%' },
+  { metric: 'LlamaFirewall bypass',  baseline: '100%', zeroshot: '100%', rl: '100%'    },
+  { metric: 'Task success rate',     baseline: '0%',   zeroshot: '0%',   rl: '0%'      },
+  { metric: 'Composed bypass',       baseline: '0%',   zeroshot: '0%',   rl: '0%'      },
+];
+
+const PLOTS = [
+  {
+    src: '/plots/reward_curve.png',
+    title: 'GRPO Reward Curve',
+    caption: 'Reward trends upward across 300 training steps (0.347 → 0.458 peak). ±σ band shows policy variance decreasing as the attacker converges.',
+  },
+  {
+    src: '/plots/bypass_bars.png',
+    title: 'Bypass Rates by Attack Type',
+    caption: 'PG2 and LlamaFirewall bypass rates across all 4 attack categories at 1500 evaluation steps. Both classifiers are largely defeated.',
+  },
+  {
+    src: '/plots/per_category.png',
+    title: 'Per-Category Breakdown',
+    caption: 'Attack success breakdown for email exfiltration, forbidden tool, prompt leak, and RAG injection.',
+  },
+  {
+    src: '/plots/kl_loss_curve.png',
+    title: 'KL Divergence + Loss',
+    caption: 'KL stayed low throughout training (< 0.002) — policy stayed close to the base model. Loss converged quickly.',
+  },
+  {
+    src: '/plots/completion_stats.png',
+    title: 'Completion Statistics',
+    caption: 'Mean completion length capped at 128 tokens. Clipped ratio = 1.0 throughout — attacker consistently hit the token limit.',
+  },
+];
+
+function PlotImg({ src, title }) {
+  const [status, setStatus] = React.useState('loading'); // loading | ok | error
+  return (
+    <div className="plot-img-wrap">
+      {status === 'loading' && <div className="plot-loading">Loading {title}…</div>}
+      {status === 'error'   && <div className="plot-loading plot-error">⚠ Could not load {title}</div>}
+      <img
+        src={src} alt={title}
+        className={`plot-img ${status === 'ok' ? '' : 'plot-img--hidden'}`}
+        onLoad={()  => setStatus('ok')}
+        onError={() => setStatus('error')}
+      />
+    </div>
+  );
+}
+
+function Dashboard() {
   return (
     <div className="dashboard">
-      <h2>Training Results</h2>
-      <p className="dashboard-intro">
-        300 GRPO steps on A100 (Google Colab Pro). Real trainer_state.json data.
-        PG2 bypass 75–100%, LlamaFirewall bypass 100%, SecAlign holds at this scale.
-      </p>
+      <div className="dash-header">
+        <h2>Training Results</h2>
+        <p className="dashboard-intro">
+          Real 300-step GRPO run on A100 (Colab Pro). Attacker: Qwen2.5-1.5B + LoRA r=16.
+          Defense stack: Llama Prompt Guard 2 + Meta-SecAlign-8B + LlamaFirewall.
+        </p>
+      </div>
+
+      {/* Stats cards */}
+      <div className="stats-grid">
+        {STATS_CARDS.map((s, i) => (
+          <div key={i} className={`stat-card stat-card--${s.color}`}>
+            <div className="stat-value">{s.value}</div>
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-sub">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Results comparison table */}
+      <div className="results-table-wrap">
+        <h3>Attacker Performance vs Baselines</h3>
+        <p className="table-note">
+          Evaluated on 24 traces (4 attack types × 6 step counts). Handcrafted = static
+          corpus; Zero-shot = untrained Qwen; RL = after 300 GRPO steps.
+        </p>
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Handcrafted</th>
+              <th>Zero-shot Qwen</th>
+              <th className="th-rl">InjectArena RL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {RESULTS_TABLE.map((row, i) => (
+              <tr key={i}>
+                <td>{row.metric}</td>
+                <td>{row.baseline}</td>
+                <td>{row.zeroshot}</td>
+                <td className="td-rl">{row.rl}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="table-footnote">
+          Composed bypass requires PG2 not flagged AND LlamaFirewall not flagged AND task succeeded.
+          SecAlign-8B is the binding defense layer at this attacker scale (1.5B parameters, 300 steps).
+        </p>
+      </div>
+
+      {/* Plots */}
+      <h3 className="plots-heading">Training Plots</h3>
       <div className="dashboard-grid">
-        {plots.map((p, i) => (
+        {PLOTS.map((p, i) => (
           <div key={i} className="plot-card">
-            <img src={p.src} alt={p.caption} className="plot-img"
-              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
-            />
-            <div className="plot-fallback" style={{display:'none'}}>Plot loading…</div>
+            <div className="plot-card-title">{p.title}</div>
+            <PlotImg src={p.src} title={p.title} />
             <p className="plot-caption">{p.caption}</p>
           </div>
         ))}
