@@ -7,7 +7,7 @@ description: >
 
 entry_point: "uvicorn env.server:app --host 0.0.0.0 --port 7860"
 
-spaces_url: "https://huggingface.co/spaces/Jaswanth-K1210/injectarena"
+spaces_url: "https://huggingface.co/spaces/Jaswanth-K/Inject-Arena"
 
 endpoints:
   reset:
