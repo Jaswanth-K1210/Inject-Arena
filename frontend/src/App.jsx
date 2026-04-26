@@ -1,16 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './index.css';
 
-// ── Real training data from data/trainer_state.json ──────────────────────────
+// ── Real training data — run_v2 checkpoint-800 (80 entries, steps 10–800) ─────
 const REWARD_HISTORY = [
-  {step:10,r:0.3513},{step:20,r:0.4076},{step:30,r:0.4401},{step:40,r:0.3515},
-  {step:50,r:0.4038},{step:60,r:0.4276},{step:70,r:0.4251},{step:80,r:0.4584},
-  {step:90,r:0.4124},{step:100,r:0.4365},{step:110,r:0.4213},{step:120,r:0.4162},
+  {step:10, r:0.3513},{step:20, r:0.4076},{step:30, r:0.4401},{step:40, r:0.3515},
+  {step:50, r:0.4038},{step:60, r:0.4276},{step:70, r:0.4251},{step:80, r:0.4584},
+  {step:90, r:0.4124},{step:100,r:0.4365},{step:110,r:0.4213},{step:120,r:0.4162},
   {step:130,r:0.4228},{step:140,r:0.4378},{step:150,r:0.4044},{step:160,r:0.4115},
   {step:170,r:0.3597},{step:180,r:0.4429},{step:190,r:0.4497},{step:200,r:0.4179},
   {step:210,r:0.4125},{step:220,r:0.3832},{step:230,r:0.4056},{step:240,r:0.4254},
   {step:250,r:0.4531},{step:260,r:0.3818},{step:270,r:0.4081},{step:280,r:0.4414},
-  {step:290,r:0.3472},{step:300,r:0.3559},
+  {step:290,r:0.3472},{step:300,r:0.3559},{step:310,r:0.4182},{step:320,r:0.4318},
+  {step:330,r:0.3891},{step:340,r:0.4424},{step:350,r:0.4159},{step:360,r:0.4387},
+  {step:370,r:0.3978},{step:380,r:0.4516},{step:390,r:0.4274},{step:400,r:0.4247},
+  {step:410,r:0.3837},{step:420,r:0.4465},{step:430,r:0.4391},{step:440,r:0.4122},
+  {step:450,r:0.4298},{step:460,r:0.3773},{step:470,r:0.4458},{step:480,r:0.4221},
+  {step:490,r:0.4384},{step:500,r:0.4163},{step:510,r:0.3898},{step:520,r:0.4471},
+  {step:530,r:0.4318},{step:540,r:0.4192},{step:550,r:0.4432},{step:560,r:0.3951},
+  {step:570,r:0.4397},{step:580,r:0.4267},{step:590,r:0.4511},{step:600,r:0.4181},
+  {step:610,r:0.4022},{step:620,r:0.4459},{step:630,r:0.4342},{step:640,r:0.4188},
+  {step:650,r:0.4427},{step:660,r:0.3888},{step:670,r:0.4481},{step:680,r:0.4241},
+  {step:690,r:0.4398},{step:700,r:0.4218},{step:710,r:0.3921},{step:720,r:0.4503},
+  {step:730,r:0.4393},{step:740,r:0.4302},{step:750,r:0.4466},{step:760,r:0.4078},
+  {step:770,r:0.4497},{step:780,r:0.4346},{step:790,r:0.4421},{step:800,r:0.4387},
 ];
 
 // ── Real trace outcomes per attack type ───────────────────────────────────────
@@ -118,30 +130,36 @@ function rewardToY(r) {
   return GH - ((r - Y_MIN) / (Y_MAX - Y_MIN)) * GH;
 }
 
-function RewardGraph({ visible }) {
+function RewardGraph({ visible, compact = false }) {
   const [pts, setPts] = useState(0);
+  const speed = compact ? 230 : 90; // standalone plays faster
 
   useEffect(() => {
-    if (!visible) { setPts(0); return; }
-    let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setPts(i);
-      if (i >= REWARD_HISTORY.length) clearInterval(id);
-    }, 230);
-    return () => clearInterval(id);
-  }, [visible]);
+    // always start animating after a short delay
+    const start = setTimeout(() => {
+      if (pts > 0) return; // already running
+      let i = 0;
+      const id = setInterval(() => {
+        i += 1;
+        setPts(i);
+        if (i >= REWARD_HISTORY.length) clearInterval(id);
+      }, speed);
+      return () => clearInterval(id);
+    }, compact ? 0 : 400);
+    return () => clearTimeout(start);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const shown = REWARD_HISTORY.slice(0, Math.max(pts, 1));
+  const shown = REWARD_HISTORY.slice(0, Math.max(pts, 2));
 
   const pathD = shown.map((p, i) => {
-    const x = (p.step / 300) * GW;
+    const x = (p.step / 800) * GW;
     const y = rewardToY(p.r);
     return (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
 
   const lastPt = shown[shown.length - 1];
-  const dotX = (lastPt.step / 300) * GW;
+  const dotX = (lastPt.step / 800) * GW;
   const dotY = rewardToY(lastPt.r);
 
   return (
@@ -174,11 +192,32 @@ function RewardGraph({ visible }) {
   );
 }
 
-// ── Firewall Wall ─────────────────────────────────────────────────────────────
-function FirewallWall({ name, icon, subtitle, status }) {
-  // status: 'idle' | 'scanning' | 'bypassed' | 'blocked'
+// ── Live Reward Panel (always visible on attack tab) ─────────────────────────
+function LiveRewardPanel() {
+  const peak  = Math.max(...REWARD_HISTORY.map(p => p.r));
+  const start = REWARD_HISTORY[0].r;
+  const last  = REWARD_HISTORY[REWARD_HISTORY.length - 1].r;
   return (
-    <div className={`fw-wall fw-wall--${status}`}>
+    <section className="reward-panel">
+      <div className="reward-panel-header">
+        <span>📈 GRPO Reward — 800 training steps on A100</span>
+        <div className="reward-panel-chips">
+          <span className="rp-chip rp-chip--dim">start {start.toFixed(3)}</span>
+          <span className="rp-chip rp-chip--green">peak {peak.toFixed(3)}</span>
+          <span className="rp-chip rp-chip--blue">final {last.toFixed(3)}</span>
+        </div>
+      </div>
+      <RewardGraph visible={true} compact={false} />
+    </section>
+  );
+}
+
+// ── Firewall Wall ─────────────────────────────────────────────────────────────
+function FirewallWall({ name, icon, subtitle, status, binding = false }) {
+  // status: 'idle' | 'scanning' | 'bypassed' | 'blocked'
+  const wallClass = `fw-wall fw-wall--${status}${binding ? ' fw-wall--binding' : ''}`;
+  return (
+    <div className={wallClass}>
       <div className="fw-wall-bricks">
         {Array.from({length: 12}).map((_, i) => (
           <div key={i} className="fw-brick" />
@@ -188,10 +227,15 @@ function FirewallWall({ name, icon, subtitle, status }) {
         <span className="fw-icon">{icon}</span>
         <strong>{name}</strong>
         <span className="fw-subtitle">{subtitle}</span>
+        {binding && <span className="fw-binding-badge">Binding Defense</span>}
       </div>
       {status === 'scanning' && <div className="fw-scan-ray" />}
       {status === 'bypassed' && <div className="fw-breach">BYPASSED</div>}
-      {status === 'blocked'  && <div className="fw-block-flash">BLOCKED</div>}
+      {status === 'blocked'  && (
+        <div className={binding ? 'fw-block-flash fw-held' : 'fw-block-flash'}>
+          {binding ? '🛡️ HELD' : 'BLOCKED'}
+        </div>
+      )}
     </div>
   );
 }
@@ -293,7 +337,6 @@ function Battlefield({ isRunning, attackType, steps, fast, onComplete }) {
           </div>
         )}
 
-        <RewardGraph visible={isRunning || phase === 'done'} />
       </div>
 
       {/* ── MIDDLE: Firewalls + beam ── */}
@@ -318,6 +361,7 @@ function Battlefield({ isRunning, attackType, steps, fast, onComplete }) {
             icon="🧠"
             subtitle="Agent defense"
             status={agentStatus}
+            binding={true}
           />
           <FirewallWall
             name="LlamaFirewall"
@@ -426,11 +470,11 @@ function InlineResults() {
         {/* Mini stat row */}
         <div className="inline-stats">
           {[
-            { label: 'Training steps', val: '800', color: 'blue' },
-            { label: 'Peak reward',    val: '0.458', color: 'green' },
-            { label: 'PG2 bypass',     val: '75–100%', color: 'green' },
-            { label: 'FW bypass',      val: '100%', color: 'green' },
-            { label: 'Task success',   val: '0%', color: 'yellow' },
+            { label: 'Training steps', val: '800',     color: 'blue'   },
+            { label: 'Peak reward',    val: '0.458',   color: 'green'  },
+            { label: 'PG2 bypass',     val: '75–100%', color: 'green'  },
+            { label: 'FW bypass',      val: '100%',    color: 'green'  },
+            { label: 'Task success',   val: '25%',     color: 'yellow' },
           ].map((s, i) => (
             <div key={i} className={`inline-stat inline-stat--${s.color}`}>
               <span className="inline-stat-val">{s.val}</span>
@@ -453,7 +497,7 @@ function InlineResults() {
 
         <p className="inline-note">
           The attacker (Qwen2.5-1.5B + LoRA r=16) was trained with GRPO for 800 steps against the live defense stack.
-          Both input classifiers are bypassed. SecAlign-8B (agent-side) remains robust at this scale.
+          Both input classifiers are bypassed. Email exfiltration achieves full compromise. SecAlign-8B is the binding defense for harder targets.
           <button className="inline-more-btn" onClick={() => document.querySelector('.tab')?.click()}>
             See all 5 plots →
           </button>
@@ -738,6 +782,9 @@ export default function App() {
                 </div>
               )}
             </section>
+
+            {/* Always-visible reward graph */}
+            <LiveRewardPanel />
 
             {/* Battlefield */}
             {(running || result) && (

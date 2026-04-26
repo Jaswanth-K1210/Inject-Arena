@@ -466,6 +466,39 @@ body {
 .fw-wall--bypassed .fw-wall-bricks { opacity: 0.06; }
 .fw-wall--blocked  { border-color: var(--red); box-shadow: 0 0 25px #ff404040; color: var(--red); }
 
+/* SecAlign binding defense — gold when it holds */
+.fw-wall--binding { border-color: #aa8800; }
+.fw-wall--binding.fw-wall--blocked {
+  border-color: var(--yellow);
+  box-shadow: 0 0 35px #ffd70055;
+  color: var(--yellow);
+  animation: binding-hold 1s ease-in-out infinite;
+}
+@keyframes binding-hold {
+  0%,100% { box-shadow: 0 0 25px #ffd70040; }
+  50%      { box-shadow: 0 0 50px #ffd70090; }
+}
+.fw-binding-badge {
+  font-size: 0.55rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--yellow);
+  border: 1px solid #aa8800;
+  background: #ffd70012;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-top: 0.2rem;
+}
+.fw-held {
+  background: #ffd70020 !important;
+  color: var(--yellow) !important;
+  border: 1px solid var(--yellow) !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 @keyframes wall-pulse {
   0%,100% { box-shadow: 0 0 15px #58a6ff30; }
   50%      { box-shadow: 0 0 30px #58a6ff60; }
@@ -759,6 +792,49 @@ body {
   font-size: 0.78rem;
   color: var(--text2);
   line-height: 1.5;
+}
+
+/* ── Live Reward Panel ──────────────────────────────────────────────────────── */
+.reward-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem 1rem;
+  margin-bottom: 1.5rem;
+}
+.reward-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.reward-panel-chips { display: flex; gap: 0.5rem; }
+.rp-chip {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+.rp-chip--dim   { background: #ffffff10; color: var(--text2); border: 1px solid var(--border); }
+.rp-chip--green { background: #00ff8820; color: var(--green); border: 1px solid #00ff8840; }
+.rp-chip--blue  { background: #58a6ff20; color: var(--blue);  border: 1px solid #58a6ff40; }
+
+/* Taller graph when standalone */
+.reward-panel .reward-graph-wrap {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.reward-panel .reward-svg {
+  height: 100px;
 }
 
 /* ── Fast mode badge ────────────────────────────────────────────────────────── */
