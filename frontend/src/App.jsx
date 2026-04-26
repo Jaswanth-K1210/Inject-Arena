@@ -487,11 +487,11 @@ function InlineResults() {
         <div className="inline-plots">
           <div className="inline-plot">
             <div className="inline-plot-title">Reward over training (800 steps, A100)</div>
-            <PlotImg src="/plots/reward_curve.png" title="Reward Curve" />
+            <PlotImg src={`${GH_RAW}/reward_curve.png`} title="Reward Curve" />
           </div>
           <div className="inline-plot">
             <div className="inline-plot-title">Bypass rates across attack types</div>
-            <PlotImg src="/plots/bypass_bars.png" title="Bypass Bars" />
+            <PlotImg src={`${GH_RAW}/bypass_bars.png`} title="Bypass Bars" />
           </div>
         </div>
 
@@ -524,31 +524,32 @@ const RESULTS_TABLE = [
   { metric: 'Composed bypass',       baseline: '0%',   zeroshot: '0%',   rl: '0%'      },
 ];
 
+const GH_RAW = 'https://raw.githubusercontent.com/Jaswanth-K1210/Inject-Arena/main/docs/plots';
 const PLOTS = [
   {
-    src: '/plots/reward_curve.png',
+    src: `${GH_RAW}/reward_curve.png`,
     title: 'GRPO Reward Curve',
     caption: 'Real reward across 800 GRPO steps. Peak 0.501 at step 740 (up from 0.405 at step 10). Variance reflects GRPO group sampling exploration.',
   },
   {
-    src: '/plots/bypass_bars.png',
+    src: `${GH_RAW}/bypass_bars.png`,
     title: 'Bypass Rates by Attack Type',
-    caption: 'PG2 and LlamaFirewall bypass rates across all 4 attack categories at 1500 evaluation steps. Both classifiers are largely defeated.',
+    caption: 'PG2 and LlamaFirewall bypass rates across all 4 attack categories. Both classifiers largely defeated by the RL attacker.',
   },
   {
-    src: '/plots/per_category.png',
+    src: `${GH_RAW}/per_category.png`,
     title: 'Per-Category Breakdown',
     caption: 'Attack success breakdown for email exfiltration, forbidden tool, prompt leak, and RAG injection.',
   },
   {
-    src: '/plots/kl_loss_curve.png',
+    src: `${GH_RAW}/kl_loss_curve.png`,
     title: 'KL Divergence + Loss',
-    caption: 'KL stayed low throughout training (< 0.002) — policy stayed close to the base model. Loss converged quickly.',
+    caption: 'KL stayed low throughout training — policy stayed close to the base model while reward improved.',
   },
   {
-    src: '/plots/completion_stats.png',
+    src: `${GH_RAW}/completion_stats.png`,
     title: 'Completion Statistics',
-    caption: 'Mean completion length capped at 128 tokens. Clipped ratio = 1.0 throughout — attacker consistently hit the token limit.',
+    caption: 'Mean completion length across 800 steps. Clipped ratio shows attacker consistently used its full token budget.',
   },
 ];
 
