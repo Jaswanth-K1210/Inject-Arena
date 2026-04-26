@@ -70,30 +70,39 @@ function formatDuration(secs) {
 }
 
 // ── Launch Mode Modal ─────────────────────────────────────────────────────────
-function LaunchModal({ steps, onDemo, onLive, onClose }) {
+function LaunchModal({ steps, onFast, onDemo, onLive, onClose }) {
   const liveTime = formatDuration(steps * SECS_PER_STEP_REAL);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
         <h3>How do you want to run this attack?</h3>
-        <p className="modal-sub">{steps} training steps · {ATTACK_TYPES.find(t=>t.id) ? '' : ''}</p>
+        <p className="modal-sub">{steps} training steps selected</p>
+
+        <button className="modal-option modal-option--fast" onClick={onFast}>
+          <div className="modal-option-icon">⚡</div>
+          <div className="modal-option-body">
+            <strong>Instant Demo</strong>
+            <span className="modal-time modal-time--instant">3 seconds</span>
+            <p>For judges / quick review — compressed animation showing the full attack in 3 seconds using real A100 trace data.</p>
+          </div>
+        </button>
 
         <button className="modal-option modal-option--demo" onClick={onDemo}>
           <div className="modal-option-icon">▶</div>
           <div className="modal-option-body">
-            <strong>View Pre-Recorded Demo</strong>
-            <span className="modal-time modal-time--fast">Instant</span>
-            <p>Replay a real A100 trace — all 24 attack scenarios pre-recorded. Full animation with actual payload, scores, and agent response.</p>
+            <strong>Full Demo Playback</strong>
+            <span className="modal-time modal-time--fast">~7 seconds</span>
+            <p>Replay a real A100 trace with full animation — typewriter payload, scan rays, beam travel, agent response.</p>
           </div>
         </button>
 
         <button className="modal-option modal-option--live" onClick={onLive}>
-          <div className="modal-option-icon">⚡</div>
+          <div className="modal-option-icon">🔴</div>
           <div className="modal-option-body">
             <strong>Run Live on HF Space</strong>
             <span className="modal-time modal-time--slow">{liveTime} with real defenses</span>
-            <p>Calls /reset + /step on the live server. Real defense stack on GPU (PG2 + SecAlign + LlamaFirewall). One episode, results streamed back.</p>
+            <p>Calls /reset + /step on the live server. PG2 + SecAlign + LlamaFirewall run against the payload in real time.</p>
           </div>
         </button>
       </div>
@@ -202,11 +211,12 @@ function PayloadArrow({ phase, pg2Ok, fwOk, taskOk }) {
 }
 
 // ── Typewriter ────────────────────────────────────────────────────────────────
-function Typewriter({ text, active }) {
+function Typewriter({ text, active, fast }) {
   const [displayed, setDisplayed] = useState('');
 
   useEffect(() => {
     if (!active) { setDisplayed(''); return; }
+    if (fast) { setDisplayed(text); return; }
     let i = 0;
     const id = setInterval(() => {
       setDisplayed(text.slice(0, i + 1));
@@ -214,7 +224,7 @@ function Typewriter({ text, active }) {
       if (i >= text.length) clearInterval(id);
     }, 18);
     return () => clearInterval(id);
-  }, [active, text]);
+  }, [active, text, fast]);
 
   return (
     <div className="typewriter-output">
@@ -225,22 +235,23 @@ function Typewriter({ text, active }) {
 }
 
 // ── Battlefield ───────────────────────────────────────────────────────────────
-// Phase sequence:
-//   idle → generating (0-2.5s) → pg2 (2.5s) → agent (4s) → fw (5.5s) → done (7s)
-const PHASE_TIMES = { generating: 0, pg2: 2500, agent: 4200, fw: 5700, done: 7200 };
+// Phase sequence: idle → generating → pg2 → agent → fw → done
+const PHASE_TIMES_FULL = { pg2: 2500, agent: 4200, fw: 5700, done: 7200 };
+const PHASE_TIMES_FAST = { pg2:  600, agent: 1200, fw: 2000, done: 3000 };
 
-function Battlefield({ isRunning, attackType, steps, onComplete }) {
+function Battlefield({ isRunning, attackType, steps, fast, onComplete }) {
   const [phase, setPhase] = useState('idle');
   const trace = TRACES[attackType] || TRACES.email_exfiltration;
+  const T = fast ? PHASE_TIMES_FAST : PHASE_TIMES_FULL;
 
   useEffect(() => {
     if (!isRunning) { setPhase('idle'); return; }
 
     setPhase('generating');
     const timers = [
-      setTimeout(() => setPhase('pg2'),   PHASE_TIMES.pg2),
-      setTimeout(() => setPhase('agent'), PHASE_TIMES.agent),
-      setTimeout(() => setPhase('fw'),    PHASE_TIMES.fw),
+      setTimeout(() => setPhase('pg2'),   T.pg2),
+      setTimeout(() => setPhase('agent'), T.agent),
+      setTimeout(() => setPhase('fw'),    T.fw),
       setTimeout(() => {
         setPhase('done');
         onComplete({ pg2: trace.pg2_ok, fw: trace.fw_ok, task: trace.task_ok });
@@ -278,7 +289,7 @@ function Battlefield({ isRunning, attackType, steps, onComplete }) {
         {(phase === 'generating' || phase === 'pg2' || phase === 'agent' || phase === 'fw' || phase === 'done') && (
           <div className="payload-box">
             <div className="payload-box-label">crafting payload →</div>
-            <Typewriter text={trace.payload} active={phase === 'generating'} />
+            <Typewriter text={trace.payload} active={phase === 'generating'} fast={fast} />
           </div>
         )}
 
@@ -398,6 +409,55 @@ function ResultSummary({ result, steps, attackType, onRetry }) {
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Inline Results (shown on attack page after completion) ───────────────────
+function InlineResults() {
+  return (
+    <div className="inline-results">
+      <div className="inline-results-header">
+        📊 Training Context — How did the attacker learn this?
+      </div>
+      <div className="inline-results-body">
+
+        {/* Mini stat row */}
+        <div className="inline-stats">
+          {[
+            { label: 'Training steps', val: '300', color: 'blue' },
+            { label: 'Peak reward',    val: '0.458', color: 'green' },
+            { label: 'PG2 bypass',     val: '75–100%', color: 'green' },
+            { label: 'FW bypass',      val: '100%', color: 'green' },
+            { label: 'Task success',   val: '0%', color: 'yellow' },
+          ].map((s, i) => (
+            <div key={i} className={`inline-stat inline-stat--${s.color}`}>
+              <span className="inline-stat-val">{s.val}</span>
+              <span className="inline-stat-lbl">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Reward curve + bypass bars side by side */}
+        <div className="inline-plots">
+          <div className="inline-plot">
+            <div className="inline-plot-title">Reward over training (300 steps, A100)</div>
+            <PlotImg src="/plots/reward_curve.png" title="Reward Curve" />
+          </div>
+          <div className="inline-plot">
+            <div className="inline-plot-title">Bypass rates across attack types</div>
+            <PlotImg src="/plots/bypass_bars.png" title="Bypass Bars" />
+          </div>
+        </div>
+
+        <p className="inline-note">
+          The attacker (Qwen2.5-1.5B + LoRA r=16) was trained with GRPO for 300 steps against the live defense stack.
+          Both input classifiers are bypassed. SecAlign-8B (agent-side) remains robust at this scale.
+          <button className="inline-more-btn" onClick={() => document.querySelector('.tab')?.click()}>
+            See all 5 plots →
+          </button>
+        </p>
       </div>
     </div>
   );
@@ -573,6 +633,7 @@ export default function App() {
   const [attackType, setType]   = useState('email_exfiltration');
   const [steps, setSteps]       = useState(300);
   const [showModal, setModal]   = useState(false);
+  const [fastMode, setFastMode] = useState(false);
   const [running, setRunning]   = useState(false);
   const [liveStatus, setLive]   = useState('');
   const [result, setResult]     = useState(null);
@@ -580,19 +641,16 @@ export default function App() {
   const openModal = () => { setModal(true); setResult(null); };
   const closeModal = () => setModal(false);
 
-  const launchDemo = () => {
-    setModal(false);
-    setRunning(true);
-    setResult(null);
+  const launchFast = () => {
+    setModal(false); setFastMode(true); setRunning(true); setResult(null);
   };
-
+  const launchDemo = () => {
+    setModal(false); setFastMode(false); setRunning(true); setResult(null);
+  };
   const launchLive = () => {
-    setModal(false);
-    setRunning(true);
-    setResult(null);
+    setModal(false); setFastMode(false); setRunning(true); setResult(null);
     runLiveAttack(attackType, steps, setLive, (r) => {
-      setRunning(false);
-      setResult(r);
+      setRunning(false); setResult(r);
     });
   };
 
@@ -605,6 +663,7 @@ export default function App() {
       {showModal && (
         <LaunchModal
           steps={steps}
+          onFast={launchFast}
           onDemo={launchDemo}
           onLive={launchLive}
           onClose={closeModal}
@@ -682,24 +741,31 @@ export default function App() {
             {/* Battlefield */}
             {(running || result) && (
               <section className="bf-section">
-                <h2>Attack Execution</h2>
+                <h2>
+                  Attack Execution
+                  {fastMode && <span className="fast-badge">⚡ instant mode</span>}
+                </h2>
                 <Battlefield
                   isRunning={running}
                   attackType={attackType}
                   steps={steps}
+                  fast={fastMode}
                   onComplete={onComplete}
                 />
               </section>
             )}
 
-            {/* Result */}
+            {/* Result + inline training context */}
             {result && !running && (
-              <ResultSummary
-                result={result}
-                steps={steps}
-                attackType={attackType}
-                onRetry={retry}
-              />
+              <>
+                <ResultSummary
+                  result={result}
+                  steps={steps}
+                  attackType={attackType}
+                  onRetry={retry}
+                />
+                <InlineResults />
+              </>
             )}
           </>
         ) : (
