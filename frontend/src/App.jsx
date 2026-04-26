@@ -717,6 +717,7 @@ export default function App() {
 
       {/* Hero */}
       <header className="hero">
+        <div className="hero-positioning">Stress-test agent safety before deployment</div>
         <h1>🛡️ InjectArena ⚔️</h1>
         <p className="hero-sub">
           RL attacker (Qwen2.5-1.5B + GRPO) trained against Meta's frozen defense stack.<br/>
