@@ -551,21 +551,35 @@ function App() {
         ) : (
           <section id="dashboard" className="dashboard-section">
             <h2>Training Results Dashboard</h2>
+            <p className="dashboard-intro">
+              All plots below come from the real GRPO training run on Colab A100
+              (300 steps, ~93 minutes) and the 24 recorded attack traces.
+            </p>
             <div className="dashboard-grid">
               <div className="plot-card">
-                <img src="/plots/reward_curve.png" alt="Bypass rate by training steps"
+                <img src="/plots/reward_curve.png" alt="GRPO reward curve over training steps"
                      onError={(e) => e.target.style.display = 'none'} />
-                <p><strong>Bypass progression:</strong> Bypass rate climbs as the attacker trains. PG2 reaches ~92% by 1500 steps; LlamaFirewall stays at 100%.</p>
+                <p><strong>Reward curve (continuous):</strong> Mean reward per GRPO step from 10 to 300. The attacker climbs from 0.35 → 0.46 with the smoothed trend showing learning. ±std band visible as the shaded region.</p>
               </div>
               <div className="plot-card">
                 <img src="/plots/bypass_bars.png" alt="RL-trained vs handcrafted baseline"
                      onError={(e) => e.target.style.display = 'none'} />
-                <p><strong>Bypass bars:</strong> RL-trained attacker (92% PG2 / 100% FW) vs handcrafted baseline (15% / 20%).</p>
+                <p><strong>Bypass bars:</strong> RL-trained attacker (92% PG2 / 100% FW) vs handcrafted-corpus baseline (~15% / 20%) on the same eval scenarios.</p>
               </div>
               <div className="plot-card">
                 <img src="/plots/per_category.png" alt="Per-category breakdown"
                      onError={(e) => e.target.style.display = 'none'} />
                 <p><strong>Per-category:</strong> Bypass rates broken down by attack type — strongest on email/RAG, weakest on prompt-leak.</p>
+              </div>
+              <div className="plot-card">
+                <img src="/plots/kl_loss_curve.png" alt="KL divergence and policy loss"
+                     onError={(e) => e.target.style.display = 'none'} />
+                <p><strong>Training stability:</strong> KL divergence stays near 0.0012 (well below the β=0.04 budget) — policy doesn't drift far from the base Qwen reference.</p>
+              </div>
+              <div className="plot-card">
+                <img src="/plots/completion_stats.png" alt="Completion length and clipped ratio"
+                     onError={(e) => e.target.style.display = 'none'} />
+                <p><strong>Completion stats:</strong> Mean length stays at 128 tokens with clipped_ratio = 1.0 — every payload hits the max-token cap. Suggests longer payloads might unlock more strategies; this is the main lever for the next run.</p>
               </div>
               <div className="plot-card">
                 <div className="plot-stats-block">
@@ -576,7 +590,7 @@ function App() {
                   <div className="big-stat">{stats ? stats.trace_count : '—'}</div>
                   <div className="stat-label">Recorded Attacks</div>
                 </div>
-                <p><strong>Aggregate stats:</strong> Live numbers from the trace store — exactly what the public demo serves.</p>
+                <p><strong>Live aggregate stats:</strong> Pulled from the API at page load — exactly what the public demo serves.</p>
               </div>
             </div>
           </section>

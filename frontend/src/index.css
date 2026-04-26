@@ -625,3 +625,11 @@ body {
   margin-top: 8px;
   font-style: italic;
 }
+
+.dashboard-intro {
+  text-align: center;
+  color: #475569;
+  font-size: 0.95rem;
+  max-width: 720px;
+  margin: 0 auto 24px;
+}
