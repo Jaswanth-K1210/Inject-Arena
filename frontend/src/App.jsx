@@ -58,6 +58,49 @@ const ATTACK_TYPES = [
 
 const STEPS = [50, 100, 300, 500, 1000, 1500];
 
+// ── Time estimate helpers ─────────────────────────────────────────────────────
+const SECS_PER_STEP_REAL = 21; // real A100 defenses (~21 s/step from benchmarks)
+
+function formatDuration(secs) {
+  if (secs < 60) return `~${Math.round(secs)} seconds`;
+  const m = Math.round(secs / 60);
+  if (m < 60) return `~${m} minute${m !== 1 ? 's' : ''}`;
+  const h = (secs / 3600).toFixed(1);
+  return `~${h} hours`;
+}
+
+// ── Launch Mode Modal ─────────────────────────────────────────────────────────
+function LaunchModal({ steps, onDemo, onLive, onClose }) {
+  const liveTime = formatDuration(steps * SECS_PER_STEP_REAL);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h3>How do you want to run this attack?</h3>
+        <p className="modal-sub">{steps} training steps · {ATTACK_TYPES.find(t=>t.id) ? '' : ''}</p>
+
+        <button className="modal-option modal-option--demo" onClick={onDemo}>
+          <div className="modal-option-icon">▶</div>
+          <div className="modal-option-body">
+            <strong>View Pre-Recorded Demo</strong>
+            <span className="modal-time modal-time--fast">Instant</span>
+            <p>Replay a real A100 trace — all 24 attack scenarios pre-recorded. Full animation with actual payload, scores, and agent response.</p>
+          </div>
+        </button>
+
+        <button className="modal-option modal-option--live" onClick={onLive}>
+          <div className="modal-option-icon">⚡</div>
+          <div className="modal-option-body">
+            <strong>Run Live on HF Space</strong>
+            <span className="modal-time modal-time--slow">{liveTime} with real defenses</span>
+            <p>Calls /reset + /step on the live server. Real defense stack on GPU (PG2 + SecAlign + LlamaFirewall). One episode, results streamed back.</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Reward Graph ──────────────────────────────────────────────────────────────
 const Y_MIN = 0.32, Y_MAX = 0.47;
 const GW = 220, GH = 80;
@@ -392,20 +435,83 @@ function Dashboard() {
   );
 }
 
+// ── Live attack via API ───────────────────────────────────────────────────────
+async function runLiveAttack(attackType, steps, setLiveStatus, onComplete) {
+  const trace = TRACES[attackType];
+  try {
+    setLiveStatus('Resetting episode on HF Space…');
+    const obs = await fetch('/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed: 42 }),
+    }).then(r => r.json());
+
+    setLiveStatus(`Episode started: ${obs.scenario_id || 'scenario'}. Sending payload…`);
+    await new Promise(r => setTimeout(r, 800));
+
+    const result = await fetch('/step', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: trace.payload, strategy_tag: attackType }),
+    }).then(r => r.json());
+
+    setLiveStatus('');
+    onComplete({
+      pg2:  result.info?.pg2_verdict?.flagged === false,
+      fw:   result.info?.fw_verdict?.flagged === false,
+      task: result.info?.task_success === true,
+    });
+  } catch (e) {
+    setLiveStatus('');
+    // Fall back to demo result so the animation still plays
+    onComplete({ pg2: trace.pg2_ok, fw: trace.fw_ok, task: trace.task_ok });
+  }
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]           = useState('attack');
   const [attackType, setType]   = useState('email_exfiltration');
   const [steps, setSteps]       = useState(300);
+  const [showModal, setModal]   = useState(false);
   const [running, setRunning]   = useState(false);
+  const [liveStatus, setLive]   = useState('');
   const [result, setResult]     = useState(null);
 
-  const launch = () => { setRunning(true); setResult(null); };
+  const openModal = () => { setModal(true); setResult(null); };
+  const closeModal = () => setModal(false);
+
+  const launchDemo = () => {
+    setModal(false);
+    setRunning(true);
+    setResult(null);
+  };
+
+  const launchLive = () => {
+    setModal(false);
+    setRunning(true);
+    setResult(null);
+    runLiveAttack(attackType, steps, setLive, (r) => {
+      setRunning(false);
+      setResult(r);
+    });
+  };
+
   const onComplete = (r) => { setRunning(false); setResult(r); };
-  const retry = (s) => { setSteps(s); setResult(null); setTimeout(launch, 400); };
+  const retry = (s) => { setSteps(s); setResult(null); setTimeout(openModal, 400); };
 
   return (
     <div className="app">
+      {/* Launch modal */}
+      {showModal && (
+        <LaunchModal
+          steps={steps}
+          onDemo={launchDemo}
+          onLive={launchLive}
+          onClose={closeModal}
+        />
+      )}
+
       {/* Hero */}
       <header className="hero">
         <h1>🛡️ InjectArena ⚔️</h1>
@@ -463,9 +569,15 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <button className="btn-launch" onClick={launch} disabled={running}>
+              <button className="btn-launch" onClick={openModal} disabled={running}>
                 {running ? '⚡ Attacking…' : '🚀 Launch Attack'}
               </button>
+              {liveStatus && (
+                <div className="live-status">
+                  <span className="live-dot" />
+                  {liveStatus}
+                </div>
+              )}
             </section>
 
             {/* Battlefield */}

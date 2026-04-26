@@ -118,6 +118,128 @@ body {
 .btn-secondary { background: var(--bg3); color: var(--text); }
 .btn-secondary:hover { background: var(--border); }
 
+/* ── Launch Modal ───────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: fade-in 0.15s ease-out;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 540px;
+  width: 100%;
+  position: relative;
+  animation: slide-up 0.2s ease-out;
+}
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none;
+  color: var(--text2); font-size: 1.1rem; cursor: pointer;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.modal-sub {
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin-bottom: 1.5rem;
+}
+
+.modal-option {
+  display: flex; align-items: flex-start; gap: 1rem;
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  transition: all 0.2s;
+}
+.modal-option:last-child { margin-bottom: 0; }
+.modal-option:hover { transform: translateY(-1px); }
+
+.modal-option--demo:hover { border-color: var(--green); box-shadow: 0 0 15px #00ff8820; }
+.modal-option--live:hover { border-color: var(--blue);  box-shadow: 0 0 15px #58a6ff20; }
+
+.modal-option-icon {
+  font-size: 1.5rem;
+  min-width: 2rem;
+  text-align: center;
+  margin-top: 0.1rem;
+}
+.modal-option--demo .modal-option-icon { color: var(--green); }
+.modal-option--live .modal-option-icon { color: var(--blue);  }
+
+.modal-option-body strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+.modal-option-body p {
+  font-size: 0.8rem;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-top: 0.35rem;
+}
+
+.modal-time {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: 0.03em;
+}
+.modal-time--fast { background: #00ff8820; color: var(--green); border: 1px solid #00ff8840; }
+.modal-time--slow { background: #58a6ff20; color: var(--blue);  border: 1px solid #58a6ff40; }
+
+/* Live status bar */
+.live-status {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #58a6ff10;
+  border: 1px solid #58a6ff30;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--blue);
+  font-family: var(--mono);
+}
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex-shrink: 0;
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
 /* ── Config Card ────────────────────────────────────────────────────────────── */
 .config-card {
   background: var(--bg2);
