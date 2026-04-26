@@ -3,26 +3,26 @@ import './index.css';
 
 // ── Real training data — run_v2 checkpoint-800 (80 entries, steps 10–800) ─────
 const REWARD_HISTORY = [
-  {step:10, r:0.3513},{step:20, r:0.4076},{step:30, r:0.4401},{step:40, r:0.3515},
-  {step:50, r:0.4038},{step:60, r:0.4276},{step:70, r:0.4251},{step:80, r:0.4584},
-  {step:90, r:0.4124},{step:100,r:0.4365},{step:110,r:0.4213},{step:120,r:0.4162},
-  {step:130,r:0.4228},{step:140,r:0.4378},{step:150,r:0.4044},{step:160,r:0.4115},
-  {step:170,r:0.3597},{step:180,r:0.4429},{step:190,r:0.4497},{step:200,r:0.4179},
-  {step:210,r:0.4125},{step:220,r:0.3832},{step:230,r:0.4056},{step:240,r:0.4254},
-  {step:250,r:0.4531},{step:260,r:0.3818},{step:270,r:0.4081},{step:280,r:0.4414},
-  {step:290,r:0.3472},{step:300,r:0.3559},{step:310,r:0.4182},{step:320,r:0.4318},
-  {step:330,r:0.3891},{step:340,r:0.4424},{step:350,r:0.4159},{step:360,r:0.4387},
-  {step:370,r:0.3978},{step:380,r:0.4516},{step:390,r:0.4274},{step:400,r:0.4247},
-  {step:410,r:0.3837},{step:420,r:0.4465},{step:430,r:0.4391},{step:440,r:0.4122},
-  {step:450,r:0.4298},{step:460,r:0.3773},{step:470,r:0.4458},{step:480,r:0.4221},
-  {step:490,r:0.4384},{step:500,r:0.4163},{step:510,r:0.3898},{step:520,r:0.4471},
-  {step:530,r:0.4318},{step:540,r:0.4192},{step:550,r:0.4432},{step:560,r:0.3951},
-  {step:570,r:0.4397},{step:580,r:0.4267},{step:590,r:0.4511},{step:600,r:0.4181},
-  {step:610,r:0.4022},{step:620,r:0.4459},{step:630,r:0.4342},{step:640,r:0.4188},
-  {step:650,r:0.4427},{step:660,r:0.3888},{step:670,r:0.4481},{step:680,r:0.4241},
-  {step:690,r:0.4398},{step:700,r:0.4218},{step:710,r:0.3921},{step:720,r:0.4503},
-  {step:730,r:0.4393},{step:740,r:0.4302},{step:750,r:0.4466},{step:760,r:0.4078},
-  {step:770,r:0.4497},{step:780,r:0.4346},{step:790,r:0.4421},{step:800,r:0.4387},
+  {step:10,r:0.4045},{step:20,r:0.3501},{step:30,r:0.4485},{step:40,r:0.3979},
+  {step:50,r:0.3735},{step:60,r:0.4169},{step:70,r:0.4726},{step:80,r:0.4685},
+  {step:90,r:0.3628},{step:100,r:0.3330},{step:110,r:0.3941},{step:120,r:0.3039},
+  {step:130,r:0.4041},{step:140,r:0.4172},{step:150,r:0.4412},{step:160,r:0.4303},
+  {step:170,r:0.3215},{step:180,r:0.3947},{step:190,r:0.4310},{step:200,r:0.3517},
+  {step:210,r:0.4299},{step:220,r:0.4588},{step:230,r:0.3963},{step:240,r:0.4914},
+  {step:250,r:0.4228},{step:260,r:0.3655},{step:270,r:0.4084},{step:280,r:0.4026},
+  {step:290,r:0.4513},{step:300,r:0.3943},{step:310,r:0.3248},{step:320,r:0.3546},
+  {step:330,r:0.3474},{step:340,r:0.4105},{step:350,r:0.4149},{step:360,r:0.4181},
+  {step:370,r:0.3618},{step:380,r:0.4755},{step:390,r:0.2674},{step:400,r:0.3995},
+  {step:410,r:0.3649},{step:420,r:0.3521},{step:430,r:0.4237},{step:440,r:0.3955},
+  {step:450,r:0.3149},{step:460,r:0.4617},{step:470,r:0.4726},{step:480,r:0.4335},
+  {step:490,r:0.3419},{step:500,r:0.4694},{step:510,r:0.3093},{step:520,r:0.3927},
+  {step:530,r:0.4449},{step:540,r:0.4524},{step:550,r:0.3451},{step:560,r:0.4115},
+  {step:570,r:0.4712},{step:580,r:0.4371},{step:590,r:0.4391},{step:600,r:0.4327},
+  {step:610,r:0.2989},{step:620,r:0.3654},{step:630,r:0.4590},{step:640,r:0.4817},
+  {step:650,r:0.4684},{step:660,r:0.4388},{step:670,r:0.4719},{step:680,r:0.3788},
+  {step:690,r:0.3741},{step:700,r:0.4436},{step:710,r:0.4262},{step:720,r:0.4789},
+  {step:730,r:0.4249},{step:740,r:0.5008},{step:750,r:0.3186},{step:760,r:0.3232},
+  {step:770,r:0.2345},{step:780,r:0.3764},{step:790,r:0.4499},{step:800,r:0.3999},
 ];
 
 // ── Real trace outcomes per attack type ───────────────────────────────────────
@@ -123,7 +123,7 @@ function LaunchModal({ steps, onFast, onDemo, onLive, onClose }) {
 }
 
 // ── Reward Graph ──────────────────────────────────────────────────────────────
-const Y_MIN = 0.32, Y_MAX = 0.47;
+const Y_MIN = 0.20, Y_MAX = 0.52;
 const GW = 220, GH = 80;
 
 function rewardToY(r) {
@@ -194,9 +194,9 @@ function RewardGraph({ visible, compact = false }) {
 
 // ── Live Reward Panel (always visible on attack tab) ─────────────────────────
 function LiveRewardPanel() {
-  const peak  = Math.max(...REWARD_HISTORY.map(p => p.r));
-  const start = REWARD_HISTORY[0].r;
-  const last  = REWARD_HISTORY[REWARD_HISTORY.length - 1].r;
+  const peak  = Math.max(...REWARD_HISTORY.map(p => p.r));  // 0.5008 at step 740
+  const start = REWARD_HISTORY[0].r;                        // 0.4045
+  const last  = REWARD_HISTORY[REWARD_HISTORY.length - 1].r; // 0.3999
   return (
     <section className="reward-panel">
       <div className="reward-panel-header">
@@ -471,7 +471,7 @@ function InlineResults() {
         <div className="inline-stats">
           {[
             { label: 'Training steps', val: '800',     color: 'blue'   },
-            { label: 'Peak reward',    val: '0.458',   color: 'green'  },
+            { label: 'Peak reward',    val: '0.501',   color: 'green'  },
             { label: 'PG2 bypass',     val: '75–100%', color: 'green'  },
             { label: 'FW bypass',      val: '100%',    color: 'green'  },
             { label: 'Task success',   val: '25%',     color: 'yellow' },
@@ -509,12 +509,12 @@ function InlineResults() {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const STATS_CARDS = [
-  { label: 'GRPO Steps',        value: '800',    sub: 'A100 · Google Colab Pro',    color: 'blue'   },
-  { label: 'Peak Reward',       value: '0.458',  sub: 'up from 0.347 at step 10',   color: 'green'  },
-  { label: 'PG2 Bypass',        value: '75–100%',sub: 'Llama Prompt Guard 2 (86M)', color: 'green'  },
-  { label: 'FW Bypass',         value: '100%',   sub: 'LlamaFirewall (all 4 types)',color: 'green'  },
-  { label: 'Task Success',      value: '0%',     sub: 'SecAlign-8B held — binding', color: 'yellow' },
-  { label: 'Training Time',     value: '~4.7 hrs', sub: '21 s/step on A100',        color: 'blue'   },
+  { label: 'GRPO Steps',    value: '800',     sub: 'A100 · Google Colab Pro',     color: 'blue'   },
+  { label: 'Peak Reward',   value: '0.501',   sub: 'step 740 · up from 0.405',    color: 'green'  },
+  { label: 'PG2 Bypass',    value: '75–100%', sub: 'Llama Prompt Guard 2 (86M)',  color: 'green'  },
+  { label: 'FW Bypass',     value: '100%',    sub: 'LlamaFirewall (all 4 types)', color: 'green'  },
+  { label: 'Task Success',  value: '25%',     sub: 'Email exfiltration — full compromise', color: 'yellow' },
+  { label: 'Training Time', value: '~4.7 hrs',sub: '21 s/step on A100',           color: 'blue'   },
 ];
 
 const RESULTS_TABLE = [
@@ -528,7 +528,7 @@ const PLOTS = [
   {
     src: '/plots/reward_curve.png',
     title: 'GRPO Reward Curve',
-    caption: 'Reward trends upward across 800 training steps (0.347 → 0.458 peak). ±σ band shows policy variance decreasing as the attacker converges.',
+    caption: 'Real reward across 800 GRPO steps. Peak 0.501 at step 740 (up from 0.405 at step 10). Variance reflects GRPO group sampling exploration.',
   },
   {
     src: '/plots/bypass_bars.png',
